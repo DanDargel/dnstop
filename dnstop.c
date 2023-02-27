@@ -1039,6 +1039,7 @@ keyboard(void)
     case 'r':
 	SubReport = Rcodes_report;
 	break;
+    case 'q':
     case 030:
 	Quit = 1;
 	break;
@@ -1094,7 +1095,7 @@ Help_report(void)
     print_func(" 9 - 9th level Query Names"
 	"\t( - with Sources\n");
     print_func("^R - Reset counters\n");
-    print_func("^X - Exit\n");
+    print_func("^X/q - Exit\n");
     print_func("\n");
     print_func(" ? - this\n");
 }
@@ -1302,7 +1303,7 @@ StringCounter_col_fmt(const SortItem * si)
 }
 
 const char *
-dashes(int n)
+dashes(int n, int sort)  /* sort column returns = instead */
 {
     static char *buf = "-----------------------------------------------"
     "-----------------------------------------------------------------"
@@ -1310,7 +1311,17 @@ dashes(int n)
     "-----------------------------------------------------------------"
     "-----------------------------------------------------------------"
     "-----------------------------------------------------------------";
-    return &buf[strlen(buf) - n];
+    static char *buf2 = "==============================================="
+    "================================================================="
+    "================================================================="
+    "================================================================="
+    "================================================================="
+    "=================================================================";
+
+    if (sort)
+      return &buf2[strlen(buf2) - n];
+    else
+      return &buf[strlen(buf) - n];
 }
 
 void
@@ -1321,7 +1332,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
     int WC = 9;			/* width of "Count" column */
     int WP = 6;			/* width of "Percent" column */
     int WD = 8;			/* width of "Delta" column */
-    int WA = 8;         /* width of "AvgDeleta" column */
+    int WA = 8;                 /* width of "AvgDelta" column */
     int WM = 8;			/* width of "MaxDelta" column */
     int i;
     int nlines = get_nlines();
@@ -1342,44 +1353,44 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	W1 = ncols - 1 - WC - 1 - WP - 1 - WP - 1;
 
     if (NULL == col2 || NULL == F2) {
-    if (show_delta)
-    {
-        if (W1 + 1 + WC + 1 + WP + 1 + WP + 1 + WD + 1 + WA + 1 + WM + 1 > ncols)
-        W1 = ncols - 1 - WC - 1 - WP - 1 - WP - 1 - WD - 1 - WA - 1 - WM - 1;
+	if (show_delta)
+	{
+	    if (W1 + 1 + WC + 1 + WP + 1 + WP + 1 + WD + 1 + WA + 1 + WM + 1 > ncols)
+	    W1 = ncols - 1 - WC - 1 - WP - 1 - WP - 1 - WD - 1 - WA - 1 - WM - 1;
 
-        snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP, WD, WA, WM);
-    	snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f %%%dd %%%d.1f %%%dd\n", W1, W1, WC, WP, WP, WD, WA, WM);
-    	print_func(fmt1, col1, "Count", "%", "cum%", "Delta", "AvgDelta", "MaxDelta");
-    	print_func(fmt1, dashes(W1), dashes(WC), dashes(WP), dashes(WP), dashes(WD), dashes(WA), dashes(WM));
-    	for (i = 0; i < nlines; i++) {
-    	    sum += (sorted + i)->cnt;
-    	    const char *t = F1(sorted + i);
-    	    print_func(fmt2,
-    		t,
-    		(sorted + i)->cnt,
-    		100.0 * (sorted + i)->cnt / base,
-    		100.0 * sum / base,
-            (sorted + i)->delta,
-            (sorted + i)->avgdelta,
-            (sorted + i)->maxdelta);
-    	}
-    }
-    else
-    {
-    	snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP);
-    	snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f\n", W1, W1, WC, WP, WP);
-    	print_func(fmt1, col1, "Count", "%", "cum%");
-    	print_func(fmt1, dashes(W1), dashes(WC), dashes(WP), dashes(WP));
-    	for (i = 0; i < nlines; i++) {
-    	    sum += (sorted + i)->cnt;
-    	    const char *t = F1(sorted + i);
-    	    print_func(fmt2,
-    		t,
-    		(sorted + i)->cnt,
-    		100.0 * (sorted + i)->cnt / base,
-    		100.0 * sum / base);
-    	}
-    }
+	    snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP, WD, WA, WM);
+	    snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f %%%dd %%%d.1f %%%dd\n", W1, W1, WC, WP, WP, WD, WA, WM);
+	    print_func(fmt1, col1, "Count", "%", "cum%", "Delta", "AvgDelta", "MaxDelta");
+	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0), dashes(WD,0), dashes(WA,sort_avgdelta), dashes(WM,sort_maxdelta));
+	    for (i = 0; i < nlines; i++) {
+		sum += (sorted + i)->cnt;
+		const char *t = F1(sorted + i);
+		print_func(fmt2,
+		    t,
+		    (sorted + i)->cnt,
+		    100.0 * (sorted + i)->cnt / base,
+		    100.0 * sum / base,
+		(sorted + i)->delta,
+		(sorted + i)->avgdelta,
+		(sorted + i)->maxdelta);
+	    }
+	}
+	else
+	{
+	    snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP);
+	    snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f\n", W1, W1, WC, WP, WP);
+	    print_func(fmt1, col1, "Count", "%", "cum%");
+	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0));
+	    for (i = 0; i < nlines; i++) {
+		sum += (sorted + i)->cnt;
+		const char *t = F1(sorted + i);
+		print_func(fmt2,
+		    t,
+		    (sorted + i)->cnt,
+		    100.0 * (sorted + i)->cnt / base,
+		    100.0 * sum / base);
+	    }
+	}
     } else {
 	for (i = 0; i < nlines; i++) {
 	    const char *t = F2(sorted + i);
@@ -1391,7 +1402,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	snprintf(fmt1, 64, "%%-%d.%ds %%-%d.%ds %%%ds %%%ds %%%ds\n", W1, W1, W2, W2, WC, WP, WP);
 	snprintf(fmt2, 64, "%%-%d.%ds %%-%d.%ds %%%dd %%%d.1f %%%d.1f\n", W1, W1, W2, W2, WC, WP, WP);
 	print_func(fmt1, col1, col2, "Count", "%", "cum%");
-	print_func(fmt1, dashes(W1), dashes(W2), dashes(WC), dashes(WP), dashes(WP));
+	print_func(fmt1, dashes(W1,0), dashes(W2,0), dashes(WC,1), dashes(WP,0), dashes(WP,0));
 	for (i = 0; i < nlines; i++) {
 	    const char *t = F1(sorted + i);
 	    const char *q = F2(sorted + i);

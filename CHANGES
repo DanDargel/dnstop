@@ -1,3 +1,13 @@
+2023/02/27 Dan Dargel
+
+    Added q as another quit key.
+
+    Changed headers to use = to underscore sorted column.  Fixed some code indents.
+
+2020/02/17 rijswijk@starbase.mgmt.openintel.nl
+
+    Added delta tracking and source options
+
 2014/09/12 Duane Wessels
 
     Added 'new-gtlds' filter, which includes only queries for names
