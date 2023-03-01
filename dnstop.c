@@ -80,6 +80,7 @@ typedef struct {
     inX_addr src;
     int count;
     int prevcount;
+    int delta;
     int maxdelta;
     long avgadd;
     int avgct;
@@ -929,10 +930,28 @@ handle_pcap(u_char * udata, const struct pcap_pkthdr *hdr, const u_char * pkt)
     last_ts = hdr->ts;
 }
 
+/* Update deltas in tables */
+void
+AgentAddr_deltas(hashtbl * tbl)
+{
+    AgentAddr *a;
+    hash_iter_init(tbl);
+    while ((a = hash_iterate(tbl))) {
+	a->delta = a->count - a->prevcount;
+	if (a->delta > a->maxdelta) a->maxdelta = a->delta;
+        a->prevcount = a->count;
+        if (a->delta > 0) {
+            a->avgadd += a->delta;
+            a->avgct++;
+        }
+    }
+}
+
 void
 cron_pre(void)
 {
-    (void)0;
+    AgentAddr_deltas(Sources);
+    AgentAddr_deltas(Destinations);
 }
 
 void
@@ -1516,7 +1535,6 @@ void
 AgentAddr_report(hashtbl * tbl, const char *what)
 {
     unsigned int sum = 0;
-    unsigned int delta = 0;
     int sortsize = hash_count(tbl);
     SortItem *sortme = calloc(sortsize, sizeof(SortItem));
     AgentAddr *a;
@@ -1524,15 +1542,8 @@ AgentAddr_report(hashtbl * tbl, const char *what)
     sortsize = 0;
     while ((a = hash_iterate(tbl))) {
 	sum += a->count;
-	delta = a->count - a->prevcount;
-	if (delta>a->maxdelta) a->maxdelta = delta;
-        a->prevcount = a->count;
-        if (delta > 0) {
-            a->avgadd += delta;
-            a->avgct++;
-        }
         sortme[sortsize].cnt = a->count;
-        sortme[sortsize].delta = delta;
+        sortme[sortsize].delta = a->delta;
         if (a->avgct > 0)
             sortme[sortsize].avgdelta = (double) a->avgadd / (double) a->avgct;
         else
@@ -1886,7 +1897,7 @@ usage(void)
     fprintf(stderr, "\t-n name\tCount only messages in this domain\n");
     fprintf(stderr, "\t-p\tDon't put interface in promiscuous mode\n");
     fprintf(stderr, "\t-P\tPrint \"progress\" messages in non-interactive mode\n");
-    fprintf(stderr, "\t-r\tRedraw interval, in seconds\n");
+    fprintf(stderr, "\t-r secs\tRedraw interval, in seconds (default 1)\n");
     fprintf(stderr, "\t-l N\tEnable domain stats up to N components\n");
     fprintf(stderr, "\t-X\tDon't tabulate the \"source + query name\" stats\n");
     fprintf(stderr, "\t-f\tfilter-name\n");
