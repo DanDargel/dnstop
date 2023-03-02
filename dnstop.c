@@ -207,6 +207,7 @@ struct bpf_timeval last_ts;
 struct timeval last_ts;
 #endif
 time_t report_interval = 1;
+int redraw_interval = 1;
 
 /*
  * These hold "%d" printfed strings for non-standard types/codes
@@ -1634,8 +1635,8 @@ report(void)
     time_t t;
     move(Y, 0);
     if (opt_count_queries) {
-	print_func("Queries: %u new, %u total",
-	    query_count_intvl, query_count_total);
+	print_func("Queries: %u new in %u seconds, %u total",
+	    query_count_intvl, redraw_interval, query_count_total);
 	if (Got_EOF)
 	    print_func(", EOF");
 	clrtoeol();
@@ -1643,8 +1644,8 @@ report(void)
     }
     if (opt_count_replies) {
 	move(Y, 0);
-	print_func("Replies: %u new, %u total",
-	    reply_count_intvl, reply_count_total);
+	print_func("Replies: %u new in %u seconds, %u total",
+	    reply_count_intvl, redraw_interval, reply_count_total);
 	if (Got_EOF)
 	    print_func(", EOF");
 	clrtoeol();
@@ -1950,7 +1951,6 @@ main(int argc, char *argv[])
     int x;
     struct stat sb;
     int readfile_state = 0;
-    int redraw_interval = 1;
     struct itimerval redraw_itv;
     struct bpf_program fp;
 
