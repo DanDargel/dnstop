@@ -189,10 +189,18 @@ unsigned int query_count_total = 0;
 unsigned int reply_count_intvl = 0;
 unsigned int reply_count_total = 0;
 
-int qtype_counts[T_MAX];
-int opcode_counts[OP_MAX];
-int rcode_counts[RC_MAX];
-int qclass_counts[C_MAX];
+struct counts {
+    int count;
+    int prevcount;
+    int delta;
+    int maxdelta;
+    long avgadd;
+    int avgct;
+};
+struct counts qtype_counts[T_MAX];
+struct counts opcode_counts[OP_MAX];
+struct counts rcode_counts[RC_MAX];
+struct counts qclass_counts[C_MAX];
 
 hashtbl *Sources = NULL;
 hashtbl *Destinations = NULL;
@@ -648,14 +656,14 @@ handle_dns(const char *buf, int len,
     }
     /* gather stats */
     if (0 == opt_count_replies || 1 == qh.qr) {
-	rcode_counts[qh.rcode]++;
+	rcode_counts[qh.rcode].count++;
         if ((agent = AgentAddr_lookup_or_add(Destinations, dst_addr)) != NULL)
 	    agent->count++;
     }
     if (0 == opt_count_queries || 0 == qh.qr) {
-	qtype_counts[qtype]++;
-	qclass_counts[qclass]++;
-	opcode_counts[qh.opcode]++;
+	qtype_counts[qtype].count++;
+	qclass_counts[qclass].count++;
+	opcode_counts[qh.opcode].count++;
         if ((agent = AgentAddr_lookup_or_add(Sources, src_addr)) != NULL)
 	    agent->count++;
 	for (lvl = 1; lvl <= max_level; lvl++) {
@@ -949,10 +957,29 @@ AgentAddr_deltas(hashtbl * tbl)
 }
 
 void
+Counter_deltas(struct counts a[], unsigned int max)
+{
+    unsigned int i;
+    for (i = 0; i < max; i++) {
+	if (0 >= a[i].count)
+	    continue;
+        a[i].delta = a[i].count - a[i].prevcount;
+        if (a[i].delta > a[i].maxdelta) a[i].maxdelta = a[i].delta;
+        a[i].prevcount = a[i].count;
+        a[i].avgadd += a[i].delta;
+        a[i].avgct++;
+    }
+}
+
+void
 cron_pre(void)
 {
     AgentAddr_deltas(Sources);
     AgentAddr_deltas(Destinations);
+    Counter_deltas(qtype_counts, T_MAX);
+    Counter_deltas(opcode_counts, OP_MAX);
+    Counter_deltas(rcode_counts, RC_MAX);
+    Counter_deltas(qclass_counts, C_MAX);
 }
 
 void
@@ -993,12 +1020,16 @@ keyboard(void)
     case 'e':
         show_delta = show_delta ? 0 : 1;
         break;
+    case 'c':
+        sort_avgdelta = 0;
+        sort_maxdelta = 0;
+	break;
     case 'a':
-        sort_avgdelta = sort_avgdelta ? 0 : 1;
+        sort_avgdelta = 1;
         sort_maxdelta = 0;
 	break;
     case 'm':
-        sort_maxdelta = sort_maxdelta ? 0 : 1;
+        sort_maxdelta = 1;
         sort_avgdelta = 0;
         break;
     case '1':
@@ -1017,7 +1048,6 @@ keyboard(void)
 	SubReport = DomSrc_report;
 	cur_level = 1;
 	break;
-    case 'c':
     case '@':
 	SubReport = DomSrc_report;
 	cur_level = 2;
@@ -1091,8 +1121,9 @@ Help_report(void)
     print_func(" s - Sources list\n");
     print_func(" d - Destinations list\n");
     print_func(" e - Toggle display of delta\n");
-    print_func(" a - Toggle sorting by average delta\n");
-    print_func(" m - Toggle sorting by maximum delta\n");
+    print_func(" c - Sort by count (default)\n");
+    print_func(" a - Sort by average delta\n");
+    print_func(" m - Sort by maximum delta\n");
     print_func(" t - Query types\n");
     print_func(" o - Opcodes\n");
     print_func(" r - Rcodes\n");
@@ -1485,17 +1516,23 @@ Qtype_col_fmt(const SortItem * si)
 }
 
 void
-Simple_report(int a[], unsigned int max, const char *name, strify * to_str)
+Simple_report(struct counts a[], unsigned int max, const char *name, strify * to_str)
 {
     unsigned int i;
     unsigned int sum = 0;
     unsigned int sortsize = 0;
     SortItem *sortme = calloc(max, sizeof(SortItem));
     for (i = 0; i < max; i++) {
-	if (0 >= a[i])
+	if (0 >= a[i].count)
 	    continue;
-	sum += a[i];
-	sortme[sortsize].cnt = a[i];
+	sum += a[i].count;
+	sortme[sortsize].cnt = a[i].count;
+	sortme[sortsize].delta = a[i].delta;
+        if (a[i].avgct > 0)
+            sortme[sortsize].avgdelta = (double) a[i].avgadd / (double) a[i].avgct;
+        else
+            sortme[sortsize].avgdelta = 0;
+	sortme[sortsize].maxdelta = a[i].maxdelta;
 	sortme[sortsize].ptr = to_str(i);
 	sortsize++;
     }
