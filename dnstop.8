@@ -10,7 +10,7 @@
 .Nd displays various tables of DNS traffic on your network
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46apsQR
+.Op Fl 46apsNQR
 .Op Fl b Ar expression
 .Op Fl i Ar address
 .Op Fl f Ar filter
@@ -100,6 +100,8 @@ to count only message of type ANY.
 .It Fl n Ar name
 Only count messages within the domain
 .Ar name
+.It Fl N
+Non-interactive mode with report.
 .It Fl P
 Print "progress" messages on stderr when in non-interactive mode.
 .It Fl B Ar buckets

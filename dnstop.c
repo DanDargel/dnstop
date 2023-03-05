@@ -1984,6 +1984,7 @@ usage(void)
     fprintf(stderr, "\t-b expr\tBPF program code\n");
     fprintf(stderr, "\t-i addr\tIgnore this source IP address\n");
     fprintf(stderr, "\t-n name\tCount only messages in this domain\n");
+    fprintf(stderr, "\t-N\tNon-interactive mode with report\n");
     fprintf(stderr, "\t-p\tDon't put interface in promiscuous mode\n");
     fprintf(stderr, "\t-P\tPrint \"progress\" messages in non-interactive mode\n");
     fprintf(stderr, "\t-r secs\tRedraw interval, in seconds (default 1)\n");
@@ -2054,7 +2055,7 @@ main(int argc, char *argv[])
     array_to_hash(KnownTLDs_array, KnownTLDs);
     array_to_hash(NewGTLDs_array, NewGTLDs);
 
-    while ((x = getopt(argc, argv, "46ab:B:f:i:l:n:pPr:QRvVX")) != -1) {
+    while ((x = getopt(argc, argv, "46ab:B:f:i:l:n:NpPr:QRvVX")) != -1) {
 	switch (x) {
 	case '4':
 	    opt_count_ipv4 = 1;
@@ -2080,6 +2081,8 @@ main(int argc, char *argv[])
 	    opt_filter_by_name = strdup(optarg);
 	    set_filter("qname");
 	    break;
+        case 'N':
+            interactive = 0;
 	case 'p':
 	    promisc_flag = 0;
 	    break;
@@ -2152,7 +2155,7 @@ main(int argc, char *argv[])
 	fprintf(stderr, "pcap_open_*: %s\n", errbuf);
 	exit(1);
     }
-    if (0 == isatty(1) || 0 == isatty(0)) {
+    if (0 == isatty(1) || 0 == isatty(0) || 0 == interactive) {
 	if (0 == readfile_state) {
 	    fprintf(stderr, "Non-interactive mode requires savefile argument\n");
 	    exit(1);

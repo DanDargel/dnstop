@@ -2,6 +2,7 @@
 
     Column sorting optimizations.
     Remove deltas when using file instead of device.
+    Add -N option to force non-interactive mode.
 
 2023/03/04 Dan Dargel
 
