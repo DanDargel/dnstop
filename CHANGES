@@ -1,3 +1,7 @@
+2023/03/04 Dan Dargel
+
+    Change sort keypress to uppercase and add sort on Delta column.
+
 2023/03/01 Dan Dargel
 
     Display refresh interval.

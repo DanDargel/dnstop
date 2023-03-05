@@ -156,6 +156,7 @@ int anon_flag = 0;
 int max_level = 2;
 int cur_level = 1;
 int show_delta = 1;
+int sort_delta = 0;
 int sort_maxdelta = 0;
 int sort_avgdelta = 0;
 int promisc_flag = 1;
@@ -460,6 +461,10 @@ SortItem_cmp(const void *A, const void *B)
 {
     const SortItem *a = A;
     const SortItem *b = B;
+    if (sort_delta) {
+        if (a->delta < b->delta) return 1;
+        if (a->delta > b->delta) return -1;
+    }
     if (sort_maxdelta) {
         if (a->maxdelta < b->maxdelta) return 1;
         if (a->maxdelta > b->maxdelta) return -1;
@@ -1008,8 +1013,6 @@ keyboard(void)
      */
     do_redraw = 1;
     ch = getch() & 0xff;
-    if (ch >= 'A' && ch <= 'Z')
-	ch += 'a' - 'A';
     switch (ch) {
     case 's':
 	SubReport = Sources_report;
@@ -1020,17 +1023,25 @@ keyboard(void)
     case 'e':
         show_delta = show_delta ? 0 : 1;
         break;
-    case 'c':
+    case 'C':
+        sort_delta = 0;
         sort_avgdelta = 0;
         sort_maxdelta = 0;
 	break;
-    case 'a':
+    case 'D':
+        sort_delta = 1;
+        sort_avgdelta = 0;
+        sort_maxdelta = 0;
+	break;
+    case 'A':
+        sort_delta = 0;
         sort_avgdelta = 1;
         sort_maxdelta = 0;
 	break;
-    case 'm':
-        sort_maxdelta = 1;
+    case 'M':
+        sort_delta = 0;
         sort_avgdelta = 0;
+        sort_maxdelta = 1;
         break;
     case '1':
     case '2':
@@ -1120,10 +1131,6 @@ Help_report(void)
 {
     print_func(" s - Sources list\n");
     print_func(" d - Destinations list\n");
-    print_func(" e - Toggle display of delta\n");
-    print_func(" c - Sort by count (default)\n");
-    print_func(" a - Sort by average delta\n");
-    print_func(" m - Sort by maximum delta\n");
     print_func(" t - Query types\n");
     print_func(" o - Opcodes\n");
     print_func(" r - Rcodes\n");
@@ -1145,6 +1152,11 @@ Help_report(void)
 	"\t* - with Sources\n");
     print_func(" 9 - 9th level Query Names"
 	"\t( - with Sources\n");
+    print_func(" e - Toggle display of delta\n");
+    print_func(" C - Sort by count (default)\n");
+    print_func(" D - Sort by delta\n");
+    print_func(" A - Sort by average delta\n");
+    print_func(" M - Sort by maximum delta\n");
     print_func("^R - Reset counters\n");
     print_func("^X/q - Exit\n");
     print_func("\n");
@@ -1412,7 +1424,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	    snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP, WD, WA, WM);
 	    snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f %%%dd %%%d.1f %%%dd\n", W1, W1, WC, WP, WP, WD, WA, WM);
 	    print_func(fmt1, col1, "Count", "%", "cum%", "Delta", "AvgDelta", "MaxDelta");
-	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0), dashes(WD,0), dashes(WA,sort_avgdelta), dashes(WM,sort_maxdelta));
+	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_delta||sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0), dashes(WD,sort_delta), dashes(WA,sort_avgdelta), dashes(WM,sort_maxdelta));
 	    for (i = 0; i < nlines; i++) {
 		sum += (sorted + i)->cnt;
 		const char *t = F1(sorted + i);
@@ -1431,7 +1443,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	    snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP);
 	    snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f\n", W1, W1, WC, WP, WP);
 	    print_func(fmt1, col1, "Count", "%", "cum%");
-	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0));
+	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_delta||sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0));
 	    for (i = 0; i < nlines; i++) {
 		sum += (sorted + i)->cnt;
 		const char *t = F1(sorted + i);
