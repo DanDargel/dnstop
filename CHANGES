@@ -1,6 +1,7 @@
 2023/03/05 Dan Dargel
 
     Column sorting optimizations.
+    Remove deltas when using file instead of device.
 
 2023/03/04 Dan Dargel
 

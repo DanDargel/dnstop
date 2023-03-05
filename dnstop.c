@@ -148,6 +148,7 @@ WINDOW *w;
 static unsigned short check_port = 0;
 void (*SubReport) (void)= NULL;
 int (*handle_datalink) (const u_char * pkt, int len)= NULL;
+int readfile_state = 0;
 int Quit = 0;
 int Got_EOF = 0;
 unsigned int hash_buckets = 100057;
@@ -1038,7 +1039,7 @@ cron_post(void)
 void
 redraw()
 {
-    cron_pre();
+    if (!readfile_state) cron_pre();
     report();
     cron_post();
     do_redraw = 0;
@@ -1062,7 +1063,7 @@ keyboard(void)
 	SubReport = Destinatioreport;
 	break;
     case 'e':
-        show_delta = show_delta ? 0 : 1;
+        if (readfile_state == 0) show_delta = show_delta ? 0 : 1;
         break;
     case 'C':
         sort_col = 'C';
@@ -2037,7 +2038,6 @@ main(int argc, char *argv[])
     char errbuf[PCAP_ERRBUF_SIZE];
     int x;
     struct stat sb;
-    int readfile_state = 0;
     struct itimerval redraw_itv;
     struct bpf_program fp;
 
@@ -2143,6 +2143,7 @@ main(int argc, char *argv[])
     if (0 == stat(device, &sb))
 	readfile_state = 1;
     if (readfile_state) {
+        show_delta = 0;
 	pcap = pcap_open_offline(device, errbuf);
     } else {
 	pcap = pcap_open_live(device, PCAP_SNAPLEN, promisc_flag, 1, errbuf);
@@ -2258,7 +2259,6 @@ main(int argc, char *argv[])
 	    if (progress_flag && 0 == ((query_count_total + reply_count_total) & 0x3ff))
 		progress(pcap);
 	}
-	cron_pre();
 	Sources_report();
 	print_func("\n");
 	Destinatioreport();
