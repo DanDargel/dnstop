@@ -1,3 +1,7 @@
+2023/03/05 Dan Dargel
+
+    Column sorting optimizations.
+
 2023/03/04 Dan Dargel
 
     Change sort keypress to uppercase and add sort on Delta column.

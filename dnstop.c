@@ -156,9 +156,7 @@ int anon_flag = 0;
 int max_level = 2;
 int cur_level = 1;
 int show_delta = 1;
-int sort_delta = 0;
-int sort_maxdelta = 0;
-int sort_avgdelta = 0;
+char sort_col = 'C';
 int promisc_flag = 1;
 int progress_flag = 0;
 ip_list_t *IgnoreList = NULL;
@@ -176,6 +174,7 @@ const char *opt_filter_by_name = 0;
 int interactive = 1;
 typedef int (printer) (const char *,...);
 printer *print_func = (printer *) printw;
+int (*SortItem_cmp) (const void *A, const void *B) = NULL;
 
 typedef const char *(col_fmt) (const SortItem *);
 typedef char *(strify) (unsigned int);
@@ -457,22 +456,64 @@ StringAddrCounter_lookup_or_add(hashtbl * tbl, const inX_addr * addr, const char
 }
 
 int
-SortItem_cmp(const void *A, const void *B)
+SortItem_cmp_count(const void *A, const void *B)
 {
     const SortItem *a = A;
     const SortItem *b = B;
-    if (sort_delta) {
-        if (a->delta < b->delta) return 1;
-        if (a->delta > b->delta) return -1;
-    }
-    if (sort_maxdelta) {
-        if (a->maxdelta < b->maxdelta) return 1;
-        if (a->maxdelta > b->maxdelta) return -1;
-    }
-    if (sort_avgdelta) {
-        if (a->avgdelta < b->avgdelta) return 1;
-        if (a->avgdelta > b->avgdelta) return -1;
-    }
+    if (a->cnt < b->cnt)
+	return 1;
+    if (a->cnt > b->cnt)
+	return -1;
+    if (a->ptr < b->ptr)
+	return 1;
+    if (a->ptr > b->ptr)
+	return -1;
+    return 0;
+}
+
+int
+SortItem_cmp_delta(const void *A, const void *B)
+{
+    const SortItem *a = A;
+    const SortItem *b = B;
+    if (a->delta < b->delta) return 1;
+    if (a->delta > b->delta) return -1;
+    if (a->cnt < b->cnt)
+	return 1;
+    if (a->cnt > b->cnt)
+	return -1;
+    if (a->ptr < b->ptr)
+	return 1;
+    if (a->ptr > b->ptr)
+	return -1;
+    return 0;
+}
+
+int
+SortItem_cmp_maxdelta(const void *A, const void *B)
+{
+    const SortItem *a = A;
+    const SortItem *b = B;
+    if (a->maxdelta < b->maxdelta) return 1;
+    if (a->maxdelta > b->maxdelta) return -1;
+    if (a->cnt < b->cnt)
+	return 1;
+    if (a->cnt > b->cnt)
+	return -1;
+    if (a->ptr < b->ptr)
+	return 1;
+    if (a->ptr > b->ptr)
+	return -1;
+    return 0;
+}
+
+int
+SortItem_cmp_avgdelta(const void *A, const void *B)
+{
+    const SortItem *a = A;
+    const SortItem *b = B;
+    if (a->avgdelta < b->avgdelta) return 1;
+    if (a->avgdelta > b->avgdelta) return -1;
     if (a->cnt < b->cnt)
 	return 1;
     if (a->cnt > b->cnt)
@@ -1024,24 +1065,20 @@ keyboard(void)
         show_delta = show_delta ? 0 : 1;
         break;
     case 'C':
-        sort_delta = 0;
-        sort_avgdelta = 0;
-        sort_maxdelta = 0;
+        sort_col = 'C';
+        SortItem_cmp = SortItem_cmp_count;
 	break;
     case 'D':
-        sort_delta = 1;
-        sort_avgdelta = 0;
-        sort_maxdelta = 0;
+        sort_col = 'D';
+        SortItem_cmp = SortItem_cmp_delta;
 	break;
     case 'A':
-        sort_delta = 0;
-        sort_avgdelta = 1;
-        sort_maxdelta = 0;
+        sort_col = 'A';
+        SortItem_cmp = SortItem_cmp_avgdelta;
 	break;
     case 'M':
-        sort_delta = 0;
-        sort_avgdelta = 0;
-        sort_maxdelta = 1;
+        sort_col = 'M';
+        SortItem_cmp = SortItem_cmp_maxdelta;
         break;
     case '1':
     case '2':
@@ -1059,6 +1096,7 @@ keyboard(void)
 	SubReport = DomSrc_report;
 	cur_level = 1;
 	break;
+    case 'c':
     case '@':
 	SubReport = DomSrc_report;
 	cur_level = 2;
@@ -1424,7 +1462,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	    snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP, WD, WA, WM);
 	    snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f %%%dd %%%d.1f %%%dd\n", W1, W1, WC, WP, WP, WD, WA, WM);
 	    print_func(fmt1, col1, "Count", "%", "cum%", "Delta", "AvgDelta", "MaxDelta");
-	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_delta||sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0), dashes(WD,sort_delta), dashes(WA,sort_avgdelta), dashes(WM,sort_maxdelta));
+	    print_func(fmt1, dashes(W1,0), dashes(WC,sort_col == 'C'), dashes(WP,0), dashes(WP,0), dashes(WD,sort_col == 'D'), dashes(WA,sort_col == 'A'), dashes(WM,sort_col == 'M'));
 	    for (i = 0; i < nlines; i++) {
 		sum += (sorted + i)->cnt;
 		const char *t = F1(sorted + i);
@@ -1443,7 +1481,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	    snprintf(fmt1, 64, "%%-%d.%ds %%%ds %%%ds %%%ds\n", W1, W1, WC, WP, WP);
 	    snprintf(fmt2, 64, "%%-%d.%ds %%%dd %%%d.1f %%%d.1f\n", W1, W1, WC, WP, WP);
 	    print_func(fmt1, col1, "Count", "%", "cum%");
-	    print_func(fmt1, dashes(W1,0), dashes(WC,!(sort_delta||sort_avgdelta||sort_maxdelta)), dashes(WP,0), dashes(WP,0));
+	    print_func(fmt1, dashes(W1,0), dashes(WC,sort_col == 'C'), dashes(WP,0), dashes(WP,0));
 	    for (i = 0; i < nlines; i++) {
 		sum += (sorted + i)->cnt;
 		const char *t = F1(sorted + i);
@@ -1465,7 +1503,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
 	snprintf(fmt1, 64, "%%-%d.%ds %%-%d.%ds %%%ds %%%ds %%%ds\n", W1, W1, W2, W2, WC, WP, WP);
 	snprintf(fmt2, 64, "%%-%d.%ds %%-%d.%ds %%%dd %%%d.1f %%%d.1f\n", W1, W1, W2, W2, WC, WP, WP);
 	print_func(fmt1, col1, col2, "Count", "%", "cum%");
-	print_func(fmt1, dashes(W1,0), dashes(W2,0), dashes(WC,1), dashes(WP,0), dashes(WP,0));
+	print_func(fmt1, dashes(W1,0), dashes(W2,0), dashes(WC,sort_col == 'C'), dashes(WP,0), dashes(WP,0));
 	for (i = 0; i < nlines; i++) {
 	    const char *t = F1(sorted + i);
 	    const char *q = F2(sorted + i);
@@ -2003,6 +2041,7 @@ main(int argc, char *argv[])
     struct itimerval redraw_itv;
     struct bpf_program fp;
 
+    SortItem_cmp = SortItem_cmp_count;
     SubReport = Sources_report;
     progname = strdup(strrchr(argv[0], '/') ? strchr(argv[0], '/') + 1 : argv[0]);
     srandom(time(NULL));
