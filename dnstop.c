@@ -151,6 +151,7 @@ int (*handle_datalink) (const u_char * pkt, int len)= NULL;
 int readfile_state = 0;
 int Quit = 0;
 int Got_EOF = 0;
+int max_lines = 50;
 unsigned int hash_buckets = 100057;
 char *progname = NULL;
 int anon_flag = 0;
@@ -1385,7 +1386,7 @@ get_nlines(void)
     if (interactive)
 	return getmaxy(w) - 6;
     else
-	return 50;
+	return max_lines;
 }
 
 int
@@ -1394,7 +1395,7 @@ get_ncols(void)
     if (interactive)
 	return getmaxx(w);
     else
-	return 80;
+	return 200;
 }
 
 const char *
@@ -1443,7 +1444,7 @@ Table_report(SortItem * sorted, int rows, const char *col1, const char *col2, co
     char fmt2[64];
     unsigned int sum = 0;
 
-    if (nlines > rows)
+    if (nlines > rows || nlines == 0)
 	nlines = rows;
 
     for (i = 0; i < nlines; i++) {
@@ -1984,7 +1985,7 @@ usage(void)
     fprintf(stderr, "\t-b expr\tBPF program code\n");
     fprintf(stderr, "\t-i addr\tIgnore this source IP address\n");
     fprintf(stderr, "\t-n name\tCount only messages in this domain\n");
-    fprintf(stderr, "\t-N\tNon-interactive mode with report\n");
+    fprintf(stderr, "\t-N num\tNon-interactive mode with report of num records (0=all)\n");
     fprintf(stderr, "\t-p\tDon't put interface in promiscuous mode\n");
     fprintf(stderr, "\t-P\tPrint \"progress\" messages in non-interactive mode\n");
     fprintf(stderr, "\t-r secs\tRedraw interval, in seconds (default 1)\n");
@@ -2055,7 +2056,7 @@ main(int argc, char *argv[])
     array_to_hash(KnownTLDs_array, KnownTLDs);
     array_to_hash(NewGTLDs_array, NewGTLDs);
 
-    while ((x = getopt(argc, argv, "46ab:B:f:i:l:n:NpPr:QRvVX")) != -1) {
+    while ((x = getopt(argc, argv, "46ab:B:f:i:l:n:N:pPr:QRvVX")) != -1) {
 	switch (x) {
 	case '4':
 	    opt_count_ipv4 = 1;
@@ -2083,6 +2084,7 @@ main(int argc, char *argv[])
 	    break;
         case 'N':
             interactive = 0;
+	    max_lines = atoi(optarg);
 	case 'p':
 	    promisc_flag = 0;
 	    break;

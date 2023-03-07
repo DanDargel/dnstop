@@ -1,3 +1,8 @@
+2023/03/07 Dan Dargel
+
+    Add number of records to -N option.
+    Increase max width of non-interactive mode.
+
 2023/03/05 Dan Dargel
 
     Column sorting optimizations.
