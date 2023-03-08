@@ -10,11 +10,14 @@
 .Nd displays various tables of DNS traffic on your network
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46apsNQR
+.Op Fl 46aGpsNPQRX
 .Op Fl b Ar expression
 .Op Fl i Ar address
 .Op Fl f Ar filter
 .Op Fl r Ar interval
+.Op Fl N Ar num
+.Op Fl l Ar levels
+.Op Fl B Ar buckets
 .Op Ar device
 .Op Ar savefile
 .Sh DESCRIPTION
@@ -44,6 +47,9 @@ anonymize addresses
 BPF filter expression
 .br
 (default: udp port 53)
+.It Fl G
+Process GRE encapsulated DNS and set BPF to "proto gre".
+Useful for remote sniffing.
 .It Fl i Ar address
 ignore select addresses
 .It Fl p
@@ -62,8 +68,7 @@ with second-level domain names.  Increasing the
 .Pa level
 provides more details, but also requires more memory and CPU.
 .\"
-.It Fl f
-input filter name
+.It Fl f Ar input_filter_name
 .Pp
 The "unknown-tlds" filter 
 includes only queries for TLDs that are

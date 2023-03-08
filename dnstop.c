@@ -2028,6 +2028,7 @@ usage(void)
     fprintf(stderr, "\t-R\tCount responses\n");
     fprintf(stderr, "\t-a\tAnonymize IP Addrs\n");
     fprintf(stderr, "\t-b expr\tBPF program code\n");
+    fprintf(stderr, "\t-G\tProcess GRE and set BPF to 'proto gre'\n");
     fprintf(stderr, "\t-i addr\tIgnore this source IP address\n");
     fprintf(stderr, "\t-n name\tCount only messages in this domain\n");
     fprintf(stderr, "\t-N num\tNon-interactive mode with report of num records (0=all)\n");
@@ -2101,7 +2102,7 @@ main(int argc, char *argv[])
     array_to_hash(KnownTLDs_array, KnownTLDs);
     array_to_hash(NewGTLDs_array, NewGTLDs);
 
-    while ((x = getopt(argc, argv, "46ab:B:f:i:l:n:N:pPr:QRvVX")) != -1) {
+    while ((x = getopt(argc, argv, "46ab:B:f:Gi:l:n:N:pPr:QRvVX")) != -1) {
 	switch (x) {
 	case '4':
 	    opt_count_ipv4 = 1;
@@ -2135,6 +2136,9 @@ main(int argc, char *argv[])
 	    break;
 	case 'P':
 	    progress_flag = 1;
+	    break;
+	case 'G':
+	    bpf_program_str = "proto gre";
 	    break;
 	case 'b':
 	    bpf_program_str = strdup(optarg);

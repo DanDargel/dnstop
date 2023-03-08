@@ -3,6 +3,7 @@
     Add number of records to -N option.
     Increase max width of non-interactive mode.
     Decode GRE tunneled DNS if bpf filter includes it.
+    Add switch -G to set bpf to 'proto gre'.
 
 2023/03/05 Dan Dargel
 
