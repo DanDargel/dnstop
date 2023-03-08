@@ -126,6 +126,18 @@ struct _rfc1035_header {
     unsigned short arcount;
 };
 
+struct gre_hdr {
+    unsigned char rc:3;
+    unsigned char ssr:1;
+    unsigned char snp:1;
+    unsigned char kp:1;
+    unsigned char rp:1;
+    unsigned char cp:1;
+    unsigned char ver:3;
+    unsigned char flags:5;
+    unsigned short proto;
+};
+
 struct ip_list_s {
     inX_addr addr;
     void *data;
@@ -237,6 +249,8 @@ void DomSrc_report();
 void Help_report(void);
 void ResetCounters(void);
 void report(void);
+int handle_ether(const u_char * pkt, int len);
+
 
 typedef struct {
     unsigned short qtype;
@@ -825,6 +839,35 @@ handle_ipv6(struct ip6_hdr *ipv6, int len)
 
 
 int
+handle_gre(const struct gre_hdr *gre, int len)
+{
+    int offset = sizeof(struct gre_hdr);
+
+    if (gre->cp || gre->rp) offset += 4;
+    if (gre->kp) offset += 4;
+    if (gre->snp) offset += 4;
+    if (gre->ver != 0) return 1;
+
+    if (gre->rp) {
+        return 1;  /* Need to handle routes present */
+    }
+
+    if (len - offset < 1) return 1;
+
+   if (ntohs(gre->proto) == 0x6558)
+       return (handle_ether((u_char *)((char *)gre + offset), len - offset));
+
+   if (ntohs(gre->proto) == ETHERTYPE_IP)
+       return (handle_ipv4((struct ip *)((char *)gre + offset), len - offset));
+
+   if (ntohs(gre->proto) == ETHERTYPE_IPV6)
+       return (handle_ipv6((struct ip6_hdr *)((char *)gre + offset), len - offset));
+
+   return 1;
+}
+
+
+int
 handle_ipv4(const struct ip *ip, int len)
 {
     int offset = ip->ip_hl << 2;
@@ -836,6 +879,9 @@ handle_ipv4(const struct ip *ip, int len)
 	return (handle_ipv6((struct ip6_hdr *)ip, len));
 #endif
 
+    if (IPPROTO_GRE == ip->ip_p)
+        return (handle_gre((struct gre_hdr *)((char *)ip + offset), len - offset));
+
     if (0 == opt_count_ipv4)
 	return 0;
 
@@ -844,10 +890,9 @@ handle_ipv4(const struct ip *ip, int len)
     if (ignore_list_match(&src_addr))
 	return (0);
 
-    if (IPPROTO_UDP != ip->ip_p)
-	return 0;
-    if (0 == handle_udp((struct udphdr *)((char *)ip + offset), len - offset, &src_addr, &dst_addr))
-	return 0;
+    if (IPPROTO_UDP == ip->ip_p)
+	return (handle_udp((struct udphdr *)((char *)ip + offset), len - offset, &src_addr, &dst_addr));
+
     return 1;
 }
 
