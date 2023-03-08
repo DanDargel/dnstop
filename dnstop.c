@@ -852,18 +852,20 @@ handle_gre(const struct gre_hdr *gre, int len)
         return 1;  /* Need to handle routes present */
     }
 
-    if (len - offset < 1) return 1;
+    if (len < offset) return 1;
 
-   if (ntohs(gre->proto) == 0x6558)
-       return (handle_ether((u_char *)((char *)gre + offset), len - offset));
+    if (ntohs(gre->proto) == 0x6558)
+        return (handle_ether((u_char *)((char *)gre + offset), len - offset));
 
-   if (ntohs(gre->proto) == ETHERTYPE_IP)
-       return (handle_ipv4((struct ip *)((char *)gre + offset), len - offset));
+    if (ntohs(gre->proto) == ETHERTYPE_IP)
+        return (handle_ipv4((struct ip *)((char *)gre + offset), len - offset));
 
-   if (ntohs(gre->proto) == ETHERTYPE_IPV6)
-       return (handle_ipv6((struct ip6_hdr *)((char *)gre + offset), len - offset));
+#if USE_IPV6
+    if (ntohs(gre->proto) == ETHERTYPE_IPV6)
+        return (handle_ipv6((struct ip6_hdr *)((char *)gre + offset), len - offset));
+#endif
 
-   return 1;
+    return 1;
 }
 
 
